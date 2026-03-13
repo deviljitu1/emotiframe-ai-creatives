@@ -1,1157 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VoiceBeat — Mix Her Voice</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --bg: #080810;
-    --surface: #0f0f1a;
-    --card: #13131f;
-    --border: #1e1e32;
-    --accent: #e040fb;
-    --gold: #ffd54f;
-    --teal: #00e5ff;
-    --text: #f0eeff;
-    --muted: #6b6b8a;
-    --glow: 0 0 30px rgba(224,64,251,0.4);
-  }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 20px 80px;
-    overflow-x: hidden;
-  }
-
-  /* Background grain */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.6;
-  }
-
-  /* Ambient blobs */
-  .blob {
-    position: fixed;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.12;
-    pointer-events: none;
-    z-index: 0;
-  }
-  .blob-1 { width: 500px; height: 500px; background: var(--accent); top: -150px; left: -100px; }
-  .blob-2 { width: 400px; height: 400px; background: var(--teal); bottom: -100px; right: -80px; }
-  .blob-3 { width: 300px; height: 300px; background: var(--gold); top: 50%; left: 50%; transform: translate(-50%,-50%); }
-
-  .container {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 680px;
-  }
-
-  /* Header */
-  header {
-    text-align: center;
-    margin-bottom: 48px;
-    animation: fadeDown 0.8s ease both;
-  }
-
-  .tag {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    color: var(--accent);
-    border: 1px solid rgba(224,64,251,0.3);
-    padding: 4px 14px;
-    border-radius: 100px;
-    margin-bottom: 16px;
-  }
-
-  h1 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(52px, 10vw, 80px);
-    letter-spacing: 4px;
-    line-height: 1;
-    background: linear-gradient(135deg, var(--text) 0%, var(--accent) 50%, var(--teal) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: 10px;
-  }
-
-  .subtitle {
-    color: var(--muted);
-    font-size: 15px;
-    font-weight: 300;
-    letter-spacing: 0.5px;
-  }
-
-  /* Cards */
-  .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 28px;
-    margin-bottom: 20px;
-    animation: fadeUp 0.7s ease both;
-    transition: border-color 0.3s;
-  }
-  .card:hover { border-color: rgba(224,64,251,0.3); }
-
-  .card-label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .card-label span { font-size: 16px; }
-
-  /* Upload Zone */
-  .upload-zone {
-    border: 2px dashed var(--border);
-    border-radius: 14px;
-    padding: 40px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-  }
-  .upload-zone:hover, .upload-zone.drag-over {
-    border-color: var(--accent);
-    background: rgba(224,64,251,0.05);
-  }
-  .upload-zone input[type=file] {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-    width: 100%;
-    height: 100%;
-  }
-
-  .upload-icon {
-    font-size: 36px;
-    margin-bottom: 12px;
-    display: block;
-  }
-
-  .upload-text {
-    font-size: 15px;
-    color: var(--muted);
-    line-height: 1.6;
-  }
-  .upload-text strong { color: var(--text); }
-
-  .file-loaded {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 18px;
-    background: rgba(224,64,251,0.1);
-    border: 1px solid rgba(224,64,251,0.3);
-    border-radius: 12px;
-    margin-top: 14px;
-    display: none;
-  }
-  .file-loaded.show { display: flex; }
-  .file-loaded .fname {
-    font-size: 14px;
-    font-weight: 500;
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .file-loaded .remove-btn {
-    background: none;
-    border: none;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 18px;
-    transition: color 0.2s;
-    padding: 0;
-  }
-  .file-loaded .remove-btn:hover { color: #ff4444; }
-
-  /* Beat Grid */
-  .beat-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
-  .beat-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px 16px;
-    cursor: pointer;
-    transition: all 0.25s ease;
-    text-align: left;
-    color: var(--text);
-    position: relative;
-    overflow: hidden;
-  }
-  .beat-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, var(--accent), var(--teal));
-    opacity: 0;
-    transition: opacity 0.25s;
-  }
-  .beat-btn:hover::before { opacity: 0.08; }
-  .beat-btn.selected {
-    border-color: var(--accent);
-    box-shadow: var(--glow);
-  }
-  .beat-btn.selected::before { opacity: 0.12; }
-
-  .beat-emoji { font-size: 22px; display: block; margin-bottom: 8px; position: relative; z-index: 1; }
-  .beat-name { font-size: 14px; font-weight: 600; position: relative; z-index: 1; }
-  .beat-desc { font-size: 12px; color: var(--muted); margin-top: 2px; position: relative; z-index: 1; }
-
-  .selected-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 8px; height: 8px;
-    background: var(--accent);
-    border-radius: 50%;
-    z-index: 1;
-    display: none;
-    box-shadow: 0 0 8px var(--accent);
-  }
-  .beat-btn.selected .selected-badge { display: block; }
-
-  /* Sliders */
-  .slider-group {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-  }
-
-  .slider-row {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .slider-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  .slider-val {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 18px;
-    color: var(--accent);
-    letter-spacing: 1px;
-  }
-
-  input[type=range] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 4px;
-    background: var(--border);
-    border-radius: 100px;
-    outline: none;
-    cursor: pointer;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 18px; height: 18px;
-    background: var(--accent);
-    border-radius: 50%;
-    box-shadow: 0 0 10px rgba(224,64,251,0.6);
-    cursor: pointer;
-    transition: transform 0.2s;
-  }
-  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-
-  /* Visualizer */
-  .visualizer-wrap {
-    height: 80px;
-    background: var(--surface);
-    border-radius: 12px;
-    overflow: hidden;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    padding: 0 16px;
-  }
-
-  .bar {
-    width: 4px;
-    border-radius: 100px;
-    background: linear-gradient(to top, var(--accent), var(--teal));
-    transition: height 0.1s ease;
-    opacity: 0.6;
-  }
-
-  /* Controls */
-  .controls {
-    display: flex;
-    gap: 12px;
-    margin-top: 20px;
-  }
-
-  .btn-primary {
-    flex: 1;
-    padding: 16px;
-    background: linear-gradient(135deg, var(--accent), #7b1fa2);
-    border: none;
-    border-radius: 14px;
-    color: #fff;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 18px;
-    letter-spacing: 2px;
-    cursor: pointer;
-    transition: all 0.25s ease;
-    box-shadow: 0 4px 20px rgba(224,64,251,0.3);
-  }
-  .btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(224,64,251,0.5);
-  }
-  .btn-primary:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .btn-secondary {
-    padding: 16px 20px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    color: var(--text);
-    font-size: 20px;
-    cursor: pointer;
-    transition: all 0.25s ease;
-  }
-  .btn-secondary:hover:not(:disabled) {
-    border-color: var(--teal);
-    color: var(--teal);
-  }
-  .btn-secondary:disabled { opacity: 0.3; cursor: not-allowed; }
-
-  /* Status */
-  .status-bar {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 18px;
-    font-size: 13px;
-    color: var(--muted);
-    margin-top: 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 50px;
-  }
-  .status-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--muted);
-    flex-shrink: 0;
-  }
-  .status-dot.active {
-    background: #4caf50;
-    box-shadow: 0 0 8px #4caf50;
-    animation: pulse 1.2s infinite;
-  }
-  .status-dot.processing {
-    background: var(--gold);
-    box-shadow: 0 0 8px var(--gold);
-    animation: pulse 0.6s infinite;
-  }
-
-  /* Download */
-  .download-section {
-    display: none;
-    margin-top: 20px;
-    padding: 24px;
-    background: linear-gradient(135deg, rgba(224,64,251,0.1), rgba(0,229,255,0.05));
-    border: 1px solid rgba(224,64,251,0.3);
-    border-radius: 20px;
-    text-align: center;
-    animation: fadeUp 0.5s ease both;
-  }
-  .download-section.show { display: block; }
-  .download-section h3 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 28px;
-    letter-spacing: 2px;
-    margin-bottom: 6px;
-    color: var(--accent);
-  }
-  .download-section p { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
-
-  .btn-download {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 14px 32px;
-    background: linear-gradient(135deg, var(--teal), #0097a7);
-    border: none;
-    border-radius: 12px;
-    color: #000;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 18px;
-    letter-spacing: 2px;
-    cursor: pointer;
-    transition: all 0.25s ease;
-    text-decoration: none;
-    font-weight: 700;
-  }
-  .btn-download:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,229,255,0.4);
-  }
-
-  /* Progress ring */
-  .progress-ring-wrap {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-    padding: 20px;
-  }
-  .progress-ring-wrap.show { display: flex; }
-
-  .progress-ring {
-    position: relative;
-    width: 80px;
-    height: 80px;
-  }
-  .progress-ring circle {
-    fill: none;
-    stroke-width: 5;
-    stroke-linecap: round;
-  }
-  .progress-ring .track { stroke: var(--border); }
-  .progress-ring .fill {
-    stroke: var(--accent);
-    stroke-dasharray: 220;
-    stroke-dashoffset: 220;
-    transition: stroke-dashoffset 0.3s ease;
-    transform-origin: center;
-    transform: rotate(-90deg);
-  }
-  .ring-pct {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 20px;
-    color: var(--accent);
-  }
-
-  /* Animations */
-  @keyframes fadeDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:none; } }
-  @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:none; } }
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-
-  .card:nth-child(1) { animation-delay: 0.1s; }
-  .card:nth-child(2) { animation-delay: 0.2s; }
-  .card:nth-child(3) { animation-delay: 0.3s; }
-  .card:nth-child(4) { animation-delay: 0.4s; }
-
-  /* Waveform canvas */
-  #waveCanvas {
-    width: 100%;
-    height: 80px;
-    display: block;
-    border-radius: 12px;
-    background: var(--surface);
-    margin-top: 12px;
-  }
-
-  /* Playback controls */
-  .playback-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 14px;
-  }
-  .play-btn {
-    width: 44px; height: 44px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), #7b1fa2);
-    border: none;
-    color: #fff;
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s;
-    flex-shrink: 0;
-  }
-  .play-btn:hover { transform: scale(1.1); }
-  .play-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-  .time-bar {
-    flex: 1;
-    height: 4px;
-    background: var(--border);
-    border-radius: 100px;
-    position: relative;
-    cursor: pointer;
-  }
-  .time-fill {
-    height: 100%;
-    background: linear-gradient(to right, var(--accent), var(--teal));
-    border-radius: 100px;
-    width: 0%;
-    transition: width 0.1s linear;
-  }
-
-  .time-label {
-    font-size: 11px;
-    color: var(--muted);
-    font-family: 'Bebas Neue', sans-serif;
-    letter-spacing: 1px;
-    white-space: nowrap;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmotiFrame AI | Premium Frame Generator</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;800&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-<div class="blob blob-1"></div>
-<div class="blob blob-2"></div>
-<div class="blob blob-3"></div>
 
-<div class="container">
-  <header>
-    <div class="tag">🎤 Hip-Hop / R&amp;B Studio</div>
-    <h1>VOICEBEAT</h1>
-    <p class="subtitle">Drop her voice note. Add the vibe. Make it unforgettable.</p>
-  </header>
+    <div class="misty-glow"></div>
+    <div class="misty-glow-2"></div>
 
-  <!-- Step 1: Upload -->
-  <div class="card">
-    <div class="card-label"><span>🎙️</span> Step 1 — Upload Voice Note</div>
-    <div class="upload-zone" id="uploadZone">
-      <input type="file" id="voiceFile" accept="audio/*,.opus,.ogg,.m4a,.mp3,.wav,.aac">
-      <span class="upload-icon">📂</span>
-      <div class="upload-text">
-        <strong>Tap to browse</strong> or drag &amp; drop<br>
-        Supports WhatsApp .opus, .m4a, .mp3, .wav, .ogg
-      </div>
-    </div>
-    <div class="file-loaded" id="fileLoaded">
-      <span>🎵</span>
-      <span class="fname" id="fileName">voice_note.opus</span>
-      <button class="remove-btn" id="removeFile">✕</button>
-    </div>
-    <canvas id="waveCanvas" style="display:none;"></canvas>
-    <div class="playback-row" id="playbackRow" style="display:none;">
-      <button class="play-btn" id="playBtn">▶</button>
-      <div class="time-bar" id="timeBar">
-        <div class="time-fill" id="timeFill"></div>
-      </div>
-      <span class="time-label" id="timeLabel">0:00 / 0:00</span>
-    </div>
-  </div>
-
-  <!-- Step 2: Beat -->
-  <div class="card">
-    <div class="card-label"><span>🥁</span> Step 2 — Choose Your Beat</div>
-    <div class="beat-grid">
-      <button class="beat-btn selected" data-beat="trap" onclick="selectBeat(this)">
-        <div class="selected-badge"></div>
-        <span class="beat-emoji">🔥</span>
-        <div class="beat-name">Trap Banger</div>
-        <div class="beat-desc">Heavy 808s, hi-hats</div>
-      </button>
-      <button class="beat-btn" data-beat="rnb" onclick="selectBeat(this)">
-        <div class="selected-badge"></div>
-        <span class="beat-emoji">🌙</span>
-        <div class="beat-name">R&amp;B Smooth</div>
-        <div class="beat-desc">Silky groove, warm bass</div>
-      </button>
-      <button class="beat-btn" data-beat="lofi" onclick="selectBeat(this)">
-        <div class="selected-badge"></div>
-        <span class="beat-emoji">☁️</span>
-        <div class="beat-name">Lo-Fi Hip-Hop</div>
-        <div class="beat-desc">Chill vibes, vinyl crackle</div>
-      </button>
-      <button class="beat-btn" data-beat="drill" onclick="selectBeat(this)">
-        <div class="selected-badge"></div>
-        <span class="beat-emoji">⚡</span>
-        <div class="beat-name">UK Drill</div>
-        <div class="beat-desc">Dark slides, rolling hi-hats</div>
-      </button>
-    </div>
-  </div>
-
-  <!-- Step 3: Mix -->
-  <div class="card">
-    <div class="card-label"><span>🎚️</span> Step 3 — Set the Mix</div>
-    <div class="slider-group">
-      <div class="slider-row">
-        <div class="slider-header">
-          <span>🎤 Voice Volume</span>
-          <span class="slider-val" id="voiceVal">80%</span>
+    <header>
+        <a href="#" class="logo">Emoti<span>Frame</span> AI</a>
+        <div style="display: flex; gap: 1rem;">
+            <a href="https://wa.me/917875783498" target="_blank" class="action-btn">
+                <i data-lucide="help-circle"></i> Help
+            </a>
         </div>
-        <input type="range" id="voiceVol" min="0" max="100" value="80">
-      </div>
-      <div class="slider-row">
-        <div class="slider-header">
-          <span>🥁 Beat Volume</span>
-          <span class="slider-val" id="beatVal">60%</span>
-        </div>
-        <input type="range" id="beatVol" min="0" max="100" value="60">
-      </div>
-      <div class="slider-row">
-        <div class="slider-header">
-          <span>✨ Reverb / Space</span>
-          <span class="slider-val" id="reverbVal">30%</span>
-        </div>
-        <input type="range" id="reverbVol" min="0" max="100" value="30">
-      </div>
-      <div class="slider-row">
-        <div class="slider-header">
-          <span>🎸 Bass Boost</span>
-          <span class="slider-val" id="bassVal">50%</span>
-        </div>
-        <input type="range" id="bassVol" min="0" max="100" value="50">
-      </div>
-    </div>
-  </div>
-
-  <!-- Mix Button -->
-  <div class="controls">
-    <button class="btn-secondary" id="previewBtn" disabled title="Preview mix">👂</button>
-    <button class="btn-primary" id="mixBtn" disabled>🎵 MIX IT</button>
-  </div>
-
-  <!-- Status -->
-  <div class="status-bar" id="statusBar">
-    <div class="status-dot" id="statusDot"></div>
-    <span id="statusText">Upload a voice note to get started</span>
-  </div>
-
-  <!-- Progress -->
-  <div class="progress-ring-wrap" id="progressWrap">
-    <div class="progress-ring">
-      <svg viewBox="0 0 80 80" width="80" height="80">
-        <circle class="track" cx="40" cy="40" r="35"/>
-        <circle class="fill" id="ringFill" cx="40" cy="40" r="35"/>
-      </svg>
-      <div class="ring-pct" id="ringPct">0%</div>
-    </div>
-    <div style="font-size:13px; color:var(--muted);" id="progressLabel">Mixing your track…</div>
-  </div>
-
-  <!-- Download -->
-  <div class="download-section" id="downloadSection">
-    <h3>🎶 YOUR MIX IS READY</h3>
-    <p>Download and send it back to her 💜</p>
-    <a class="btn-download" id="downloadLink" href="#" download="voicebeat_mix.wav">
-      ⬇ DOWNLOAD MIX
-    </a>
-  </div>
-</div>
-
-<script>
-// ── State ──────────────────────────────────────────────────────────────────
-let audioCtx, voiceBuffer, beatBuffer;
-let selectedBeat = 'trap';
-let mixedBlob = null;
-let playingSource = null;
-let isPlaying = false;
-let animFrame = null;
-
-// ── Sliders ────────────────────────────────────────────────────────────────
-const sliders = [
-  ['voiceVol', 'voiceVal', '%'],
-  ['beatVol',  'beatVal',  '%'],
-  ['reverbVol','reverbVal','%'],
-  ['bassVol',  'bassVal',  '%'],
-];
-sliders.forEach(([id, valId]) => {
-  const el = document.getElementById(id);
-  el.addEventListener('input', () => {
-    document.getElementById(valId).textContent = el.value + '%';
-  });
-});
-
-// ── Beat selection ─────────────────────────────────────────────────────────
-function selectBeat(btn) {
-  document.querySelectorAll('.beat-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  selectedBeat = btn.dataset.beat;
-}
-
-// ── Upload ─────────────────────────────────────────────────────────────────
-const uploadZone = document.getElementById('uploadZone');
-const fileInput  = document.getElementById('voiceFile');
-const fileLoaded = document.getElementById('fileLoaded');
-const fileName   = document.getElementById('fileName');
-const mixBtn     = document.getElementById('mixBtn');
-const previewBtn = document.getElementById('previewBtn');
-
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadZone.classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
-
-document.getElementById('removeFile').addEventListener('click', () => {
-  voiceBuffer = null;
-  fileLoaded.classList.remove('show');
-  document.getElementById('waveCanvas').style.display = 'none';
-  document.getElementById('playbackRow').style.display = 'none';
-  mixBtn.disabled = true;
-  previewBtn.disabled = true;
-  fileInput.value = '';
-  setStatus('Upload a voice note to get started', '');
-});
-
-async function handleFile(file) {
-  fileName.textContent = file.name;
-  fileLoaded.classList.add('show');
-  setStatus('Decoding audio…', 'processing');
-
-  try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const arrayBuf = await file.arrayBuffer();
-    voiceBuffer = await audioCtx.decodeAudioData(arrayBuf);
-
-    drawWaveform(voiceBuffer);
-    document.getElementById('waveCanvas').style.display = 'block';
-    document.getElementById('playbackRow').style.display = 'flex';
-    updateTimeLabel(0, voiceBuffer.duration);
-
-    mixBtn.disabled = false;
-    previewBtn.disabled = false;
-    setStatus('Voice loaded ✓  — Choose a beat and hit MIX IT!', 'active');
-  } catch(e) {
-    setStatus('Could not decode audio. Try a different file format.', '');
-  }
-}
-
-// ── Waveform ───────────────────────────────────────────────────────────────
-function drawWaveform(buffer) {
-  const canvas = document.getElementById('waveCanvas');
-  const ctx = canvas.getContext('2d');
-  canvas.width = canvas.offsetWidth * devicePixelRatio;
-  canvas.height = canvas.offsetHeight * devicePixelRatio;
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-
-  const data = buffer.getChannelData(0);
-  const W = canvas.offsetWidth, H = canvas.offsetHeight;
-  const step = Math.ceil(data.length / W);
-
-  ctx.clearRect(0,0,W,H);
-  const grad = ctx.createLinearGradient(0,0,W,0);
-  grad.addColorStop(0, '#e040fb');
-  grad.addColorStop(1, '#00e5ff');
-  ctx.strokeStyle = grad;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-
-  for (let i = 0; i < W; i++) {
-    let max = 0;
-    for (let j = 0; j < step; j++) {
-      const v = Math.abs(data[i*step + j] || 0);
-      if (v > max) max = v;
-    }
-    const h = max * H * 0.9;
-    ctx.moveTo(i, H/2 - h/2);
-    ctx.lineTo(i, H/2 + h/2);
-  }
-  ctx.stroke();
-}
-
-// ── Simple playback of raw voice ───────────────────────────────────────────
-document.getElementById('playBtn').addEventListener('click', togglePlay);
-
-function togglePlay() {
-  if (!voiceBuffer) return;
-  if (isPlaying) {
-    stopPlay();
-  } else {
-    startPlay(voiceBuffer);
-  }
-}
-
-let playStartTime = 0, playOffset = 0;
-
-function startPlay(buffer, offset = 0) {
-  stopPlay();
-  audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-  const src = audioCtx.createBufferSource();
-  src.buffer = buffer;
-  src.connect(audioCtx.destination);
-  src.start(0, offset);
-  src.onended = () => { isPlaying = false; document.getElementById('playBtn').textContent = '▶'; cancelAnimationFrame(animFrame); document.getElementById('timeFill').style.width = '0%'; playOffset = 0; };
-  playingSource = src;
-  playStartTime = audioCtx.currentTime - offset;
-  playOffset = offset;
-  isPlaying = true;
-  document.getElementById('playBtn').textContent = '⏸';
-  animateProgress(buffer.duration);
-}
-
-function stopPlay() {
-  if (playingSource) { try { playingSource.stop(); } catch(e){} playingSource = null; }
-  isPlaying = false;
-  document.getElementById('playBtn').textContent = '▶';
-  cancelAnimationFrame(animFrame);
-}
-
-function animateProgress(duration) {
-  animFrame = requestAnimationFrame(() => {
-    if (!isPlaying) return;
-    const elapsed = audioCtx.currentTime - playStartTime;
-    const pct = Math.min(elapsed / duration * 100, 100);
-    document.getElementById('timeFill').style.width = pct + '%';
-    updateTimeLabel(elapsed, duration);
-    if (pct < 100) animateProgress(duration);
-  });
-}
-
-function updateTimeLabel(cur, dur) {
-  const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
-  document.getElementById('timeLabel').textContent = `${fmt(cur)} / ${fmt(dur||0)}`;
-}
-
-// ── Status ─────────────────────────────────────────────────────────────────
-function setStatus(msg, type) {
-  document.getElementById('statusText').textContent = msg;
-  const dot = document.getElementById('statusDot');
-  dot.className = 'status-dot' + (type ? ' ' + type : '');
-}
-
-// ── Beat generation via Web Audio API ─────────────────────────────────────
-function makeBeatBuffer(ctx, duration, style) {
-  const sr = ctx.sampleRate;
-  const len = Math.ceil(duration * sr);
-  const buf = ctx.createBuffer(2, len, sr);
-
-  const L = buf.getChannelData(0);
-  const R = buf.getChannelData(1);
-
-  const bpm = style === 'lofi' ? 80 : style === 'rnb' ? 90 : style === 'drill' ? 140 : 140;
-  const spb = (60 / bpm) * sr; // samples per beat
-
-  // Kick, snare, hihat patterns per style
-  const patterns = {
-    trap:  { kick:[0,2], snare:[1,3], hihat:[0,0.5,1,1.5,2,2.5,3,3.5], hh16:[0.25,0.75,1.25,1.75,2.25,2.75,3.25,3.75] },
-    rnb:   { kick:[0,2.5], snare:[1,3], hihat:[0,1,2,3], hh16:[] },
-    lofi:  { kick:[0,2], snare:[1,3], hihat:[0,0.5,1,1.5,2,2.5,3,3.5], hh16:[] },
-    drill: { kick:[0,1.75,2], snare:[1,3], hihat:[0,0.25,0.5,0.75,1,1.25,1.5,1.75,2,2.25,2.5,2.75,3,3.25,3.5,3.75], hh16:[] },
-  };
-  const pat = patterns[style] || patterns.trap;
-
-  // Write samples
-  for (let beat = 0; beat * spb < len; beat++) {
-    const b = beat % 4; // position within bar
-    const offset = Math.round(beat * spb);
-
-    // Kick
-    if (pat.kick.includes(b)) addKick(L, R, offset, sr, style);
-    // Snare
-    if (pat.snare.includes(b)) addSnare(L, R, offset, sr, style);
-  }
-
-  // Hi-hats (fractional beats)
-  const totalBeats = len / spb;
-  pat.hihat.forEach(bPos => {
-    for (let bar = 0; bar * 4 < totalBeats; bar++) {
-      const o = Math.round((bar * 4 + bPos) * spb);
-      if (o < len) addHihat(L, R, o, sr, false, style);
-    }
-  });
-  pat.hh16.forEach(bPos => {
-    for (let bar = 0; bar * 4 < totalBeats; bar++) {
-      const o = Math.round((bar * 4 + bPos) * spb);
-      if (o < len) addHihat(L, R, o, sr, true, style);
-    }
-  });
-
-  // 808 bass line
-  add808(L, R, len, sr, spb, style);
-
-  return buf;
-}
-
-function addKick(L, R, offset, sr, style) {
-  const dur = style === 'lofi' ? 0.3 : 0.4;
-  const N = Math.min(Math.round(dur * sr), L.length - offset);
-  for (let i = 0; i < N; i++) {
-    const t = i / sr;
-    const freq = 80 * Math.exp(-t * (style === 'trap' ? 20 : 15));
-    const env = Math.exp(-t * (style === 'trap' ? 8 : 6));
-    const s = Math.sin(2 * Math.PI * freq * t) * env * 0.9;
-    L[offset + i] = clamp(L[offset + i] + s);
-    R[offset + i] = clamp(R[offset + i] + s);
-  }
-}
-
-function addSnare(L, R, offset, sr, style) {
-  const dur = style === 'lofi' ? 0.15 : 0.12;
-  const N = Math.min(Math.round(dur * sr), L.length - offset);
-  for (let i = 0; i < N; i++) {
-    const t = i / sr;
-    const env = Math.exp(-t * 30);
-    const noise = (Math.random() * 2 - 1) * env * (style === 'rnb' ? 0.5 : 0.7);
-    const tone = Math.sin(2 * Math.PI * 200 * t) * env * 0.2;
-    const s = noise + tone;
-    L[offset + i] = clamp(L[offset + i] + s);
-    R[offset + i] = clamp(R[offset + i] + s);
-  }
-}
-
-function addHihat(L, R, offset, sr, open, style) {
-  const dur = open ? 0.08 : 0.03;
-  const N = Math.min(Math.round(dur * sr), L.length - offset);
-  const gain = style === 'trap' ? 0.3 : 0.2;
-  for (let i = 0; i < N; i++) {
-    const t = i / sr;
-    const env = Math.exp(-t * (open ? 40 : 120));
-    const s = (Math.random() * 2 - 1) * env * gain;
-    L[offset + i] = clamp(L[offset + i] + s * 0.7);
-    R[offset + i] = clamp(R[offset + i] + s * 0.9);
-  }
-}
-
-function add808(L, R, len, sr, spb, style) {
-  if (style === 'lofi') return;
-  const notes = style === 'drill' ? [40, 40, 45, 38] : style === 'rnb' ? [36, 38, 41, 36] : [36, 36, 43, 36];
-  const freq0 = n => 440 * Math.pow(2, (n - 69) / 12);
-  const barLen = spb * 4;
-
-  for (let bar = 0; bar * barLen < len; bar++) {
-    notes.forEach((note, i) => {
-      const offset = Math.round(bar * barLen + i * spb);
-      const dur = Math.min(spb * 0.9, len - offset);
-      const f = freq0(note);
-      for (let j = 0; j < dur; j++) {
-        const t = j / sr;
-        const env = Math.min(1, t * 20) * Math.exp(-t * 2.5);
-        const s = Math.sin(2 * Math.PI * f * t) * env * 0.6;
-        if (offset + j < len) {
-          L[offset + j] = clamp(L[offset + j] + s);
-          R[offset + j] = clamp(R[offset + j] + s);
-        }
-      }
-    });
-  }
-}
-
-function clamp(v) { return Math.max(-1, Math.min(1, v)); }
-
-// ── Mix ───────────────────────────────────────────────────────────────────
-mixBtn.addEventListener('click', doMix);
-
-async function doMix() {
-  if (!voiceBuffer) return;
-
-  mixBtn.disabled = true;
-  previewBtn.disabled = true;
-  stopPlay();
-  document.getElementById('downloadSection').classList.remove('show');
-  document.getElementById('progressWrap').classList.add('show');
-  setStatus('Generating beat…', 'processing');
-
-  // Short artificial delay for UX
-  await tick(60);
-
-  try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const sr = audioCtx.sampleRate;
-    const duration = voiceBuffer.duration;
-
-    // Generate beat
-    const beat = makeBeatBuffer(audioCtx, duration, selectedBeat);
-    updateRing(30); setLabel('Adding reverb…'); await tick(40);
-
-    const voiceVol = document.getElementById('voiceVol').value / 100;
-    const beatVol  = document.getElementById('beatVol').value / 100;
-    const reverbAmt= document.getElementById('reverbVol').value / 100;
-    const bassAmt  = document.getElementById('bassVol').value / 100;
-
-    // Offline render for high quality mix
-    const offCtx = new OfflineAudioContext(2, Math.ceil(duration * sr), sr);
-
-    // Voice source
-    const voiceSrc = offCtx.createBufferSource();
-    voiceSrc.buffer = voiceBuffer;
-    const voiceGain = offCtx.createGain();
-    voiceGain.gain.value = voiceVol;
-
-    // Simple reverb via convolver
-    const convolver = offCtx.createConvolver();
-    convolver.buffer = makeImpulse(offCtx, 2.0, reverbAmt);
-    const convGain = offCtx.createGain();
-    convGain.gain.value = reverbAmt * 0.8;
-    const dryGain = offCtx.createGain();
-    dryGain.gain.value = 1 - reverbAmt * 0.5;
-
-    voiceSrc.connect(voiceGain);
-    voiceGain.connect(dryGain);
-    voiceGain.connect(convolver);
-    convolver.connect(convGain);
-    dryGain.connect(offCtx.destination);
-    convGain.connect(offCtx.destination);
-
-    // Beat source
-    const beatSrc = offCtx.createBufferSource();
-    beatSrc.buffer = beat;
-    const beatGain = offCtx.createGain();
-    beatGain.gain.value = beatVol;
-
-    // Bass EQ boost
-    const bass = offCtx.createBiquadFilter();
-    bass.type = 'lowshelf';
-    bass.frequency.value = 120;
-    bass.gain.value = bassAmt * 12;
-
-    beatSrc.connect(beatGain);
-    beatGain.connect(bass);
-    bass.connect(offCtx.destination);
-
-    voiceSrc.start(0);
-    beatSrc.start(0);
-
-    updateRing(60); setLabel('Rendering mix…'); await tick(40);
-
-    const rendered = await offCtx.startRendering();
-    updateRing(90); setLabel('Encoding WAV…'); await tick(30);
-
-    const wavBlob = encodeWAV(rendered);
-    mixedBlob = wavBlob;
-    const url = URL.createObjectURL(wavBlob);
-
-    document.getElementById('downloadLink').href = url;
-    document.getElementById('progressWrap').classList.remove('show');
-    document.getElementById('downloadSection').classList.add('show');
-
-    // Allow preview of mixed audio
-    previewBtn.onclick = () => {
-      wavBlob.arrayBuffer().then(ab => audioCtx.decodeAudioData(ab)).then(buf => startPlay(buf, 0));
-    };
-
-    updateRing(100);
-    setStatus('Mix complete! 🎶 Download and send it to her 💜', 'active');
-  } catch(e) {
-    setStatus('Error mixing: ' + e.message, '');
-    document.getElementById('progressWrap').classList.remove('show');
-  }
-
-  mixBtn.disabled = false;
-  previewBtn.disabled = false;
-}
-
-function tick(ms) { return new Promise(r => setTimeout(r, ms)); }
-function updateRing(pct) {
-  const fill = document.getElementById('ringFill');
-  const offset = 220 - (220 * pct / 100);
-  fill.style.strokeDashoffset = offset;
-  document.getElementById('ringPct').textContent = pct + '%';
-}
-function setLabel(txt) { document.getElementById('progressLabel').textContent = txt; }
-
-// ── Reverb impulse ─────────────────────────────────────────────────────────
-function makeImpulse(ctx, duration, decay) {
-  const sr = ctx.sampleRate;
-  const len = sr * duration;
-  const buf = ctx.createBuffer(2, len, sr);
-  for (let c = 0; c < 2; c++) {
-    const d = buf.getChannelData(c);
-    for (let i = 0; i < len; i++) {
-      d[i] = (Math.random()*2-1) * Math.pow(1 - i/len, decay * 3 + 1);
-    }
-  }
-  return buf;
-}
-
-// ── WAV encoder ────────────────────────────────────────────────────────────
-function encodeWAV(audioBuffer) {
-  const numChannels = audioBuffer.numberOfChannels;
-  const sr = audioBuffer.sampleRate;
-  const numSamples = audioBuffer.length;
-  const bitsPerSample = 16;
-  const blockAlign = numChannels * bitsPerSample / 8;
-  const byteRate = sr * blockAlign;
-  const dataSize = numSamples * blockAlign;
-
-  const buf = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buf);
-
-  writeStr(view, 0, 'RIFF');
-  view.setUint32(4, 36 + dataSize, true);
-  writeStr(view, 8, 'WAVE');
-  writeStr(view, 12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sr, true);
-  view.setUint32(28, byteRate, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bitsPerSample, true);
-  writeStr(view, 36, 'data');
-  view.setUint32(40, dataSize, true);
-
-  let offset = 44;
-  const channels = [];
-  for (let c = 0; c < numChannels; c++) channels.push(audioBuffer.getChannelData(c));
-
-  for (let i = 0; i < numSamples; i++) {
-    for (let c = 0; c < numChannels; c++) {
-      const s = Math.max(-1, Math.min(1, channels[c][i]));
-      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-      offset += 2;
-    }
-  }
-
-  return new Blob([buf], { type: 'audio/wav' });
-}
-
-function writeStr(view, offset, str) {
-  for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-}
-
-// ── Preview btn default ────────────────────────────────────────────────────
-previewBtn.addEventListener('click', () => {
-  if (voiceBuffer && !mixedBlob) togglePlay();
-});
-</script>
+    </header>
+
+    <main>
+        <aside class="sidebar">
+            <div class="control-group">
+                <label>Describe the memory</label>
+                <textarea id="promptInput" rows="4" placeholder="e.g. A portrait of a happy family at sunset in a golden field..."></textarea>
+            </div>
+
+            <div class="control-group">
+                <label>Edit Style (EmotiFrame Presets)</label>
+                <div class="style-grid" id="styleGrid">
+                    <div class="style-item active" data-style="cinematic, professionally lit, masterpiece, high detail">Cinematic</div>
+                    <div class="style-item" data-style="velvet texture, soft focus, luxurious feel, soft lighting">Velvet Texture</div>
+                    <div class="style-item" data-style="oil painting, brushed texture, fine art, classical">Oil Painting</div>
+                    <div class="style-item" data-style="sketch style, pencil drawing, charcoal texture, artistic">Sketch</div>
+                    <div class="style-item" data-style="black and white, high contrast, elegant, timeless">Monochrome</div>
+                    <div class="style-item" data-style="3d render, unreal engine 5, octane render, vivid colors">3D Modern</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Frame Width</label>
+                <select id="frameSize">
+                    <option value="40px">Classic Thick (40px)</option>
+                    <option value="20px">Modern Slim (20px)</option>
+                    <option value="60px">Lux Bold (60px)</option>
+                </select>
+            </div>
+
+            <button class="generate-btn" id="generateBtn">
+                <i data-lucide="sparkles"></i> Generate Branded Post
+            </button>
+            <p style="font-size: 0.75rem; color: #64748B; text-align: center; margin-top: 1rem;">
+                Powered by Pollinations AI & EmotiFrame Brand Engine
+            </p>
+        </aside>
+
+        <section class="canvas-area">
+            <div class="frame-container" id="frameContainer">
+                <div class="frame-inner-border"></div>
+                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=1000&auto=format&fit=crop" class="output-image" id="outputImage">
+                <div class="loading-overlay" id="loadingOverlay">
+                    <div class="spinner"></div>
+                    <p>Crafting your masterpiece...</p>
+                </div>
+            </div>
+
+            <div class="action-bar">
+                <button class="action-btn" id="downloadBtn"><i data-lucide="download"></i> Save Frame</button>
+                <button class="action-btn" id="shareBtn"><i data-lucide="share-2"></i> Share</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        const promptInput = document.getElementById('promptInput');
+        const styleItems = document.querySelectorAll('.style-item');
+        const generateBtn = document.getElementById('generateBtn');
+        const outputImage = document.getElementById('outputImage');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const frameContainer = document.getElementById('frameContainer');
+        const frameSizeSelect = document.getElementById('frameSize');
+
+        let selectedStyle = "cinematic, professionally lit, masterpiece, high detail";
+
+        // Style selection
+        styleItems.forEach(item => {
+            item.addEventListener('click', () => {
+                styleItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                selectedStyle = item.dataset.style;
+            });
+        });
+
+        // Frame size change
+        frameSizeSelect.addEventListener('change', (e) => {
+            frameContainer.style.padding = e.target.value;
+        });
+
+        // Generation logic
+        generateBtn.addEventListener('click', async () => {
+            const userPrompt = promptInput.value.trim();
+            if(!userPrompt) {
+                alert("Please describe what you'd like to frame!");
+                return;
+            }
+
+            generateBtn.disabled = true;
+            loadingOverlay.style.display = 'flex';
+
+            const brandText = "Include the brand text 'EmotiFrame' in a premium elegant typography at the bottom. DO NOT use the word 'Studio'.";
+            const fullPrompt = encodeURIComponent(`${userPrompt}, ${selectedStyle}, ${brandText}`);
+            const seed = Math.floor(Math.random() * 1000000);
+            const imageUrl = `https://pollinations.ai/p/${fullPrompt}?width=1024&height=1024&seed=${seed}&model=flux`;
+
+            // Wait for image to load
+            const img = new Image();
+            img.onload = () => {
+                outputImage.src = imageUrl;
+                loadingOverlay.style.display = 'none';
+                generateBtn.disabled = false;
+            };
+            img.onerror = () => {
+                alert("Failed to generate image. Try again.");
+                loadingOverlay.style.display = 'none';
+                generateBtn.disabled = false;
+            };
+            img.src = imageUrl;
+        });
+
+        // Simple download (opens in new tab)
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            window.open(outputImage.src, '_blank');
+        });
+    </script>
 </body>
 </html>
