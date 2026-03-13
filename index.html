@@ -127,26 +127,35 @@
             loadingOverlay.querySelector('p').innerText = "Crafting your masterpiece...";
 
             const selectedModel = modelSelect.value;
-            const brandText = "Include brand text 'EmotiFrame'. Elegant luxury style.";
-            const fullPrompt = encodeURIComponent(`${userPrompt}, ${selectedStyle}, ${brandText}`);
+            // Simplified brand instruction to avoid special character issues
+            const brandInfo = "with EmotiFrame brand aesthetic";
+            const cleanPrompt = `${userPrompt}, ${selectedStyle}, ${brandInfo}`;
+            
+            // Standard construction for the prompt
+            const fullPrompt = encodeURIComponent(cleanPrompt);
             const seed = Math.floor(Math.random() * 1000000);
             
-            // Build URL
-            const imageUrl = `https://image.pollinations.ai/prompt/${fullPrompt}?width=1024&height=1024&seed=${seed}&model=${selectedModel}&nologo=true`;
+            // Using the most stable Pollinations endpoint
+            const imageUrl = `https://pollinations.ai/p/${fullPrompt}?width=1024&height=1024&seed=${seed}&model=${selectedModel}`;
 
-            console.log("Generating with URL:", imageUrl);
+            console.log("Generating with stable URL:", imageUrl);
+
+            // Hide the default image while loading
+            outputImage.style.opacity = "0.3";
 
             // Wait for image to load
             const img = new Image();
             img.onload = () => {
                 outputImage.src = imageUrl;
+                outputImage.style.opacity = "1";
                 loadingOverlay.style.display = 'none';
                 generateBtn.disabled = false;
             };
             img.onerror = (err) => {
-                console.error("Pollinations Error:", err);
-                alert("The AI server is busy or timed out. Please try the 'Turbo' model or a simpler description.");
+                console.error("Pollinations Error Event:", err);
+                alert("The AI server is experiencing high traffic. Please try again in a few seconds or use the 'Turbo' model.");
                 loadingOverlay.style.display = 'none';
+                outputImage.style.opacity = "1";
                 generateBtn.disabled = false;
             };
             img.src = imageUrl;
