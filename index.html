@@ -47,7 +47,7 @@
             <div class="control-group">
                 <label>AI Model</label>
                 <select id="modelSelect">
-                    <option value="z-image-turbo">Turbo (Fast & Reliable)</option>
+                    <option value="turbo">Turbo (Fast & Reliable)</option>
                     <option value="flux">Flux (High Detail - Stills)</option>
                 </select>
             </div>
@@ -127,15 +127,16 @@
             loadingOverlay.querySelector('p').innerText = "Crafting your masterpiece...";
 
             const selectedModel = modelSelect.value;
-            // Simplified prompt for 2026 unified API
-            const cleanPrompt = `${userPrompt}, ${selectedStyle}, luxury frame style`;
+            // High-quality brand aesthetic logic
+            const brandInfo = "with EmotiFrame brand aesthetic, premium luxury";
+            const cleanPrompt = `${userPrompt}, ${selectedStyle}, ${brandInfo}`;
             const fullPrompt = encodeURIComponent(cleanPrompt);
             const seed = Math.floor(Math.random() * 1000000);
             
-            // Using the 2026 Unified API endpoint
-            const imageUrl = `https://gen.pollinations.ai/image/${fullPrompt}?width=1024&height=1024&seed=${seed}&model=${selectedModel}`;
+            // Using the raw image endpoint (no API key required)
+            const imageUrl = `https://image.pollinations.ai/prompt/${fullPrompt}?width=1024&height=1024&seed=${seed}&model=${selectedModel}&nologo=true`;
 
-            console.log("Generating with Unified API:", imageUrl);
+            console.log("Generating with Image API:", imageUrl);
             outputImage.style.opacity = "0.3";
 
             // Wait for image to load
@@ -151,10 +152,7 @@
                 outputImage.style.opacity = "1";
                 generateBtn.disabled = false;
                 
-                // Show a helpful error for the user
-                console.error("Pollinations timeout or error.");
-                const retry = confirm("The AI server is taking too long to respond. Do you want to try opening the image link directly in a new tab?");
-                if(retry) window.open(imageUrl, '_blank');
+                alert("The AI server is busy. Try the 'Turbo' model or refresh and try again.");
             };
             img.src = imageUrl;
         });
